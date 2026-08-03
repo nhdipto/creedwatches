@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const quantity = Math.max(1, Math.min(10, Math.round(line.quantity)));
+    const quantity = Math.max(1, Math.min(99, Math.round(line.quantity)));
     const stock = await getStock(line.id);
     if (stock < quantity) {
       return NextResponse.json(

@@ -108,14 +108,19 @@ export function ProductDetail({
     ? Math.round(((product.compareAt! - product.price) / product.compareAt!) * 100)
     : 0;
 
+  const stock = typeof product.stock === "number" ? product.stock : undefined;
+  const outOfStock = stock === 0;
+  const maxQty = stock === undefined ? 99 : Math.max(1, stock);
+
   function add(openAfter: boolean) {
+    const qty = Math.max(1, Math.min(quantity, maxQty));
     addToCart({
       id: product.id,
       title: product.name,
       price: product.price,
       compareAt: product.compareAt,
       image: product.image,
-      quantity,
+      quantity: qty,
     });
     if (openAfter) openCart();
   }
@@ -219,8 +224,22 @@ export function ProductDetail({
             {product.description}
           </p>
 
+          <div className="mt-6 flex items-center gap-2">
+            {outOfStock ? (
+              <span className="text-sm font-semibold text-red-600">Out of stock</span>
+            ) : stock === undefined ? (
+              <span className="text-sm text-zinc-600">In stock</span>
+            ) : stock <= 5 ? (
+              <span className="text-sm font-semibold text-amber-600">
+                Only {stock} left in stock
+              </span>
+            ) : (
+              <span className="text-sm text-zinc-600">{stock} in stock</span>
+            )}
+          </div>
+
           {/* Quantity + Add to cart */}
-          <div className="mt-8 flex flex-wrap items-stretch gap-3">
+          <div className="mt-4 flex flex-wrap items-stretch gap-3">
             <div className="flex items-center border border-zinc-300">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -233,8 +252,9 @@ export function ProductDetail({
                 {quantity}
               </span>
               <button
-                onClick={() => setQuantity((q) => Math.min(99, q + 1))}
-                className="flex h-full items-center px-3 text-zinc-600 transition-colors hover:text-black"
+                onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                disabled={outOfStock}
+                className="flex h-full items-center px-3 text-zinc-600 transition-colors hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Increase quantity"
               >
                 <PlusIcon className="h-4 w-4" />
@@ -243,18 +263,20 @@ export function ProductDetail({
 
             <button
               onClick={() => add(true)}
-              className="flex flex-1 items-center justify-center gap-2 bg-black px-6 py-3.5 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-zinc-800"
+              disabled={outOfStock}
+              className="flex flex-1 items-center justify-center gap-2 bg-black px-6 py-3.5 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
             >
               <BagIcon className="h-4 w-4" />
-              Add to Cart
+              {outOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
           </div>
 
           <button
             onClick={() => add(true)}
-            className="mt-3 w-full border border-zinc-900 bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-widest text-zinc-900 transition-colors hover:bg-zinc-900 hover:text-white"
+            disabled={outOfStock}
+            className="mt-3 w-full border border-zinc-900 bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-widest text-zinc-900 transition-colors hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-300 disabled:text-zinc-300"
           >
-            Buy it Now
+            {outOfStock ? "Out of Stock" : "Buy it Now"}
           </button>
 
           {/* Pickup */}

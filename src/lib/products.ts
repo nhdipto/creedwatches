@@ -22,6 +22,7 @@ export interface Product {
   rating: number;
   reviews: number;
   dateAdded: number;
+  stock?: number;
 }
 
 export const products: Product[] = [

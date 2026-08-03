@@ -42,3 +42,6 @@ next-env.d.ts
 
 # sqlite database (local data, must not be committed)
 /data
+
+# admin-uploaded images (local dev only; Netlify stores these in Blobs)
+/public/uploads

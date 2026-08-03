@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { brands, slugifyBrand } from "@/lib/products";
 import type { AdminProductRow } from "@/lib/db";
@@ -43,9 +43,35 @@ export function ProductForm({
   });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const set = (key: keyof typeof form) => (value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  async function uploadImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) {
+        setUploadError(data.error ?? "Upload failed.");
+        return;
+      }
+      set("image")(data.url);
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -210,8 +236,39 @@ export function ProductForm({
       <div className="space-y-4">
         <div>
           <label className={labelClass}>Image</label>
+          <div className="mb-3 flex items-start gap-4">
+            <div className="relative aspect-square w-20 shrink-0 overflow-hidden border border-zinc-200 bg-zinc-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={form.image} alt="" className="h-full w-full object-cover" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                  className="hidden"
+                  onChange={uploadImage}
+                />
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border border-zinc-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-zinc-900 transition-colors hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {uploading ? "Uploading..." : "Upload image"}
+                </button>
+                <span className="text-xs text-zinc-400">JPG, PNG, WebP, GIF &middot; max 5 MB</span>
+              </div>
+              <p className="text-xs text-zinc-400">
+                Works from your phone or computer. The uploaded photo is stored on Netlify
+                and shown on the storefront immediately.
+              </p>
+              {uploadError && <p className="text-xs font-medium text-red-600">{uploadError}</p>}
+            </div>
+          </div>
           <select value={form.image} onChange={(e) => set("image")(e.target.value)} className={inputClass}>
-            {IMAGE_OPTIONS.map((src) => (
+            {[...new Set([form.image, ...IMAGE_OPTIONS])].map((src) => (
               <option key={src} value={src}>
                 {src}
               </option>

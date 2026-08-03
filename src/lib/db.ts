@@ -252,6 +252,7 @@ export function mapProduct(row: Record<string, unknown>): Product {
     rating: Number(row.rating),
     reviews: Number(row.reviews),
     dateAdded: Number(row.date_added),
+    stock: Number(row.stock ?? 0),
   };
 }
 
