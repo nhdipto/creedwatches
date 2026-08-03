@@ -6,8 +6,21 @@ import { posts } from "@/lib/blog";
 import { ensureDbReady, persistDb, dbPath } from "@/lib/storage";
 
 let db: DatabaseSync | null = null;
+
+function closeDb(): void {
+  if (db) {
+    try {
+      db.close();
+    } catch {
+      // Ignore close errors; a fresh connection replaces it.
+    }
+    db = null;
+  }
+}
+
 async function readyDb(): Promise<DatabaseSync> {
-  await ensureDbReady();
+  const refreshed = await ensureDbReady();
+  if (refreshed) closeDb();
   return getDb();
 }
 
