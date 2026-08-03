@@ -1,19 +1,48 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { getStore, type Store } from "@netlify/blobs";
 
 const DB_BLOB_NAME = "creed.db";
 
-function isNetlify(): boolean {
-  return process.env.NETLIFY === "true" && !process.env.NETLIFY_LOCAL;
-}
-
+let dbDir: string | null = null;
 let initialized = false;
 
+// The classic @netlify/plugin-nextjs Lambda does not always set NETLIFY=true,
+// so detect Netlify through the Lambda environment too.
+function isNetlify(): boolean {
+  if (process.env.NETLIFY_LOCAL) return false;
+  return (
+    process.env.NETLIFY === "true" ||
+    process.env.CONTEXT === "production" ||
+    process.env.CONTEXT === "branch-deploy" ||
+    process.env.CONTEXT === "deploy-preview" ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+  );
+}
+
+// Serverless runtimes mount the app on a read-only filesystem (e.g. /var/task).
+// Probe for a writable data directory and fall back to the OS temp dir.
+function writableDir(): string {
+  const dataDir = join(process.cwd(), "data");
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    const probe = join(dataDir, ".write-probe");
+    writeFileSync(probe, "1");
+    unlinkSync(probe);
+    return dataDir;
+  } catch {
+    return tmpdir();
+  }
+}
+
+function resolveDbDir(): string {
+  if (dbDir === null) dbDir = isNetlify() ? tmpdir() : writableDir();
+  return dbDir;
+}
+
 export function dbPath(): string {
-  const dir = isNetlify() ? tmpdir() : join(process.cwd(), "data");
-  return join(dir, DB_BLOB_NAME);
+  return join(resolveDbDir(), DB_BLOB_NAME);
 }
 
 async function store(): Promise<Store> {
